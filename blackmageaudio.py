@@ -31,34 +31,42 @@ def run_bot():
     ffmpeg_options = {'options': '-vn'}
     executor = ThreadPoolExecutor(max_workers=5)  # Limit to 5 concurrent threads for smaller server architecture. Need more for live
 
-    async def download_song(url):
-        """Download a song or playlist using yt_dlp."""
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(executor, lambda: ytdl.extract_info(url, download=True))
+async def download_song(url):
+    """Download a song or playlist using yt_dlp."""
+    loop = asyncio.get_event_loop()
+    data = await loop.run_in_executor(executor, lambda: ytdl.extract_info(url, download=True))
+    file_path = ytdl.prepare_filename(data)
+    print(f"Downloaded file path: {file_path}")  # Debugging
+    return data
 
-    async def play_next_song(guild_id, voice_client):
-        """Play the next song in the queue."""
-        if guild_id in song_queues and song_queues[guild_id]:
-            # no gcd clipping on song rotation
-            next_song = song_queues[guild_id].pop(0)
+async def play_next_song(guild_id, voice_client):
+    """Play the next song in the queue."""
+    if guild_id in song_queues and song_queues[guild_id]:
+        # No gcd clipping on song rotation
+        next_song = song_queues[guild_id].pop(0)
 
-            # Executes Fire 4 Protocol
-            player = discord.FFmpegPCMAudio(next_song["file"], **ffmpeg_options)
-            voice_client.play(player, after=lambda e: asyncio.run_coroutine_threadsafe(
-                play_next_song(guild_id, voice_client), client.loop
-            ))
+        # Ensure the file exists
+        if not os.path.exists(next_song["file"]):
+            print(f"Error: File not found - {next_song['file']}")
+            return
 
-            # Delete the file after playback
-            try:
-                os.remove(next_song["file"])
-                print(f"Deleted temporary file: {next_song['file']}")
-            except Exception as e:
-                print(f"Error deleting file: {e}")
+        # Executes Fire 4 Protocol
+        player = discord.FFmpegPCMAudio(next_song["file"], **ffmpeg_options)
+        voice_client.play(player, after=lambda e: asyncio.run_coroutine_threadsafe(
+            play_next_song(guild_id, voice_client), client.loop
+        ))
 
-            # Send now playing message
-            text_channel = await get_text_channel(guild_id)
-            if text_channel:
-                await text_channel.send(f"Now casting: {next_song['title']}")
+        # Delete the file after playback
+        try:
+            os.remove(next_song["file"])
+            print(f"Deleted temporary file: {next_song['file']}")
+        except Exception as e:
+            print(f"Error deleting file: {e}")
+
+        # Send now playing message
+        text_channel = await get_text_channel(guild_id)
+        if text_channel:
+            await text_channel.send(f"Now casting: {next_song['title']}")
 
     async def get_text_channel(guild_id):
         """Find a text channel in the guild where the bot can send messages."""
