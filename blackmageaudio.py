@@ -8,7 +8,7 @@ import tempfile
 
 def run_bot():
     load_dotenv()
-    TOKEN = os.getenv('discord_token')
+    TOKEN = os.getenv('DISCORD_TOKEN')
     intents = discord.Intents.default()
     intents.message_content = True
     intents.voice_states = True  
