@@ -25,6 +25,7 @@ def run_bot():
             "preferredquality": "192",
         }],
         "quiet": True,  # silence yt_dlp logs
+        "cookiefile": "/home/ec2-user/music_bot/cookies.txt", #required to fetch from cloud
     }
     ytdl = yt_dlp.YoutubeDL(yt_dlp_options)
     ffmpeg_options = {'options': '-vn'}
