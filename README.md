@@ -13,7 +13,19 @@ Commands:
 ?stop
 
 
-Should have adequate caching and multi threading limited to 5 threads but we'll see how it goes.  It will likely need to be expanded and larger server infrastructure provisoined to support it at some point, but currently this is in dev.
+Should have adequate caching and multi threading limited to 5 threads but we'll see how it goes.  It will likely need to be expanded and larger server infrastructure provisoined to support it at some point, but currently this is in dev so if it gets overloaded, heh, oopsies.
 
-Add the bot to any server with this command: https://discord.com/oauth2/authorize?client_id=1313639246342651946&permissions=1729521119656256&integration_type=0&scope=bot
-As it is in Dev, it may or may not work at any given time.
+Add the bot to any server with this link: https://discord.com/oauth2/authorize?client_id=1313639246342651946&permissions=1729521119656256&integration_type=0&scope=bot
+As it is in Dev, it may or may not work at any given time (i.e servers down, too much traffic, etc)
+
+# Music Bot Setup Guide
+
+## Prerequisites
+
+
+If having difficulty importing or download ffmpeg, try it from here.
+curl -L https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz -o ffmpeg.tar.xz
+tar -xf ffmpeg.tar.xz
+sudo mv ffmpeg /usr/local/bin/
+sudo mv ffprobe /usr/local/bin/
+
