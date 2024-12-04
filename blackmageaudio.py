@@ -50,8 +50,15 @@ def run_bot():
         loop = asyncio.get_event_loop()
         data = await loop.run_in_executor(executor, lambda: ytdl.extract_info(url, download=True))
         file_path = ytdl.prepare_filename(data)
+        
+        if not file_path.endswith(".mp3"):
+            file_path = file_path.rsplit(".", 1)[0] + ".mp3"
+            
         print(f"Downloaded file path: {file_path}")
-        return data
+        return
+            "file": file_path,
+            "title": data.get("title", "Unknown Title"),
+    }
 
     async def play_next_song(guild_id, voice_client):
         """Play the next song in the queue."""
