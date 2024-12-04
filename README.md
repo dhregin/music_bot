@@ -14,3 +14,6 @@ Commands:
 
 
 Should have adequate caching and multi threading limited to 5 threads but we'll see how it goes.  It will likely need to be expanded and larger server infrastructure provisoined to support it at some point, but currently this is in dev.
+
+Add the bot to any server with this command: https://discord.com/oauth2/authorize?client_id=1313639246342651946&permissions=1729521119656256&integration_type=0&scope=bot
+As it is in Dev, it may or may not work at any given time.
