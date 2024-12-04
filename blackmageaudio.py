@@ -27,16 +27,18 @@ def run_bot():
 
     # yt_dlp options for downloading and cookies handling
     yt_dlp_options = {
-        "format": "bestaudio/best",
-        "outtmpl": tempfile.gettempdir() + "/%(id)s.%(ext)s",  # Save to temp directory
-        "postprocessors": [{
+    "format": "bestaudio/best",
+    "outtmpl": tempfile.gettempdir() + "/%(id)s.%(ext)s",  # Save with dynamic ID and extension
+    "postprocessors": [
+        {
             "key": "FFmpegExtractAudio",
-            "preferredcodec": "mp3",
+            "preferredcodec": "mp3",  # Convert to MP3
             "preferredquality": "192",
-        }],
-        "quiet": True,
-        "cookiefile": "/home/ec2-user/music_bot/cookies.txt",  # Required for YouTube access
-    }
+        }
+    ],
+    "quiet": True,
+    "cookiefile": "/home/ec2-user/music_bot/cookies.txt",  # Use cookies for authentication
+}
     ytdl = yt_dlp.YoutubeDL(yt_dlp_options)
     ffmpeg_options = {'options': '-vn'}
 
@@ -52,40 +54,35 @@ def run_bot():
         return data
 
     async def play_next_song(guild_id, voice_client):
-        """Play the next song in the queue."""
-        if guild_id in song_queues and song_queues[guild_id]:
-            next_song = song_queues[guild_id].pop(0)
+    """Play the next song in the queue."""
+    if guild_id in song_queues and song_queues[guild_id]:
+        next_song = song_queues[guild_id].pop(0)
 
-            # Ensure the file exists
-            if not os.path.exists(next_song["file"]):
-                print(f"Error: File not found - {next_song['file']}")
-                return
+        # Debugging: Check the file path
+        print(f"Attempting to play file: {next_song['file']}")
 
-            # Play the song
-            player = discord.FFmpegPCMAudio(next_song["file"], **ffmpeg_options)
-            voice_client.play(player, after=lambda e: asyncio.run_coroutine_threadsafe(
-                play_next_song(guild_id, voice_client), client.loop
-            ))
+        # Ensure the file exists
+        if not os.path.exists(next_song["file"]):
+            print(f"Error: File not found - {next_song['file']}")
+            return
 
-            # Delete the file after playback
-            try:
-                os.remove(next_song["file"])
-                print(f"Deleted temporary file: {next_song['file']}")
-            except Exception as e:
-                print(f"Error deleting file: {e}")
+        # Play the song
+        player = discord.FFmpegPCMAudio(next_song["file"], **ffmpeg_options)
+        voice_client.play(player, after=lambda e: asyncio.run_coroutine_threadsafe(
+            play_next_song(guild_id, voice_client), client.loop
+        ))
 
-            # Send now playing message
-            text_channel = await get_text_channel(guild_id)
-            if text_channel:
-                await text_channel.send(f"Now casting: {next_song['title']}")
+        # Delete the file after playback
+        try:
+            os.remove(next_song["file"])
+            print(f"Deleted temporary file: {next_song['file']}")
+        except Exception as e:
+            print(f"Error deleting file: {e}")
 
-    async def get_text_channel(guild_id):
-        """Find a text channel in the guild where the bot can send messages."""
-        guild = client.get_guild(guild_id)
-        if guild:
-            for channel in guild.text_channels:
-                if channel.permissions_for(guild.me).send_messages:
-                    return channel
+        # Notify in text channel
+        text_channel = await get_text_channel(guild_id)
+        if text_channel:
+            await text_channel.send(f"Now playing: {next_song['title']}")
         return None
 
     @client.event
