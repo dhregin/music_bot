@@ -13,4 +13,4 @@ Commands:
 ?stop
 
 
-Should have adequate caching and multi threading limited to 5 threads but we'll see how it goes. 
+Should have adequate caching and multi threading limited to 5 threads but we'll see how it goes.  It will likely need to be expanded and larger server infrastructure provisoined to support it at some point, but currently this is in dev.
