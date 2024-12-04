@@ -57,6 +57,7 @@ def run_bot():
         """Play the next song in the queue."""
         if guild_id in song_queues and song_queues[guild_id]:
             next_song = song_queues[guild_id].pop(0)
+            file_path = nexts_song["file"]
 
             # Debugging: Check the file path
             print(f"Attempting to play file: {next_song['file']}")
