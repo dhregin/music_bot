@@ -106,4 +106,68 @@ def run_bot():
                     voice_client = await message.author.voice.channel.connect()
                     voice_clients[message.guild.id] = voice_client
                 else:
-                    voice_client = voice_clients[message.g
+                    voice_client = voice_clients[message.guild.id]
+
+                if message.guild.id not in song_queues:
+                    song_queues[message.guild.id] = []
+
+                data = await download_song(url)
+
+                if "entries" in data:
+                    await message.channel.send(f"Found a playlist with {len(data['entries'])} songs. Queuing them...")
+                    for entry in data["entries"]:
+                        song = {
+                            "file": ytdl.prepare_filename(entry),
+                            "title": entry.get("title", "Unknown Title")
+                        }
+                        song_queues[message.guild.id].append(song)
+                else:
+                    song = {
+                        "file": ytdl.prepare_filename(data),
+                        "title": data.get("title", "Unknown Title")
+                    }
+                    song_queues[message.guild.id].append(song)
+
+                if not voice_client.is_playing():
+                    await play_next_song(message.guild.id, voice_client)
+                else:
+                    await message.channel.send(f"Added to queue: {song['title']}")
+
+            except Exception as e:
+                print(f"Error in ?play: {e}")
+                await message.channel.send("There was an error processing your request.")
+
+        if message.content.startswith("?pause"):
+            try:
+                if message.guild.id in voice_clients and voice_clients[message.guild.id].is_playing():
+                    voice_clients[message.guild.id].pause()
+                    await message.channel.send("Playback paused.")
+                else:
+                    await message.channel.send("No audio is playing.")
+            except Exception as e:
+                print(f"Error in ?pause: {e}")
+
+        if message.content.startswith("?resume"):
+            try:
+                if message.guild.id in voice_clients and voice_clients[message.guild.id].is_paused():
+                    voice_clients[message.guild.id].resume()
+                    await message.channel.send("Playback resumed.")
+                else:
+                    await message.channel.send("Audio is not paused.")
+            except Exception as e:
+                print(f"Error in ?resume: {e}")
+
+        if message.content.startswith("?stop"):
+            try:
+                if message.guild.id in voice_clients:
+                    voice_clients[message.guild.id].stop()
+                    await voice_clients[message.guild.id].disconnect()
+                    del voice_clients[message.guild.id]
+                    song_queues.pop(message.guild.id, None)
+                    await message.channel.send("Playback stopped and disconnected.")
+                else:
+                    await message.channel.send("I'm not in a voice channel.")
+            except Exception as e:
+                print(f"Error in ?stop: {e}")
+
+    client.run(TOKEN)
