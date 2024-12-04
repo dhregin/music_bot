@@ -4,18 +4,28 @@ import asyncio
 import yt_dlp
 from dotenv import load_dotenv
 from concurrent.futures import ThreadPoolExecutor
-import tempfile  # For temporary audio storage
+import tempfile
 
 def run_bot():
-    load_dotenv()
+    # Load environment variables
+    load_dotenv(dotenv_path="/home/ec2-user/music_bot/.env")
     TOKEN = os.getenv('discord_token')
+
+    if not TOKEN:
+        print("Error: Discord token not found in .env file.")
+        return
+
+    # Discord bot setup
     intents = discord.Intents.default()
     intents.message_content = True
-    intents.voice_states = True  # Ensure voice intents are enabled
+    intents.voice_states = True
     client = discord.Client(intents=intents)
 
+    # Variables for song queues and voice clients
     voice_clients = {}
     song_queues = {}
+
+    # yt_dlp options for downloading and cookies handling
     yt_dlp_options = {
         "format": "bestaudio/best",
         "outtmpl": tempfile.gettempdir() + "/%(id)s.%(ext)s",  # Save to temp directory
@@ -24,43 +34,53 @@ def run_bot():
             "preferredcodec": "mp3",
             "preferredquality": "192",
         }],
-        "quiet": True,  # Suppress yt_dlp logs
-        "cookiefile": "/home/ec2-user/music_bot/cookies.txt",  # Required for YouTube
+        "quiet": True,
+        "cookiefile": "/home/ec2-user/music_bot/cookies.txt",  # Required for YouTube access
     }
     ytdl = yt_dlp.YoutubeDL(yt_dlp_options)
     ffmpeg_options = {'options': '-vn'}
-    executor = ThreadPoolExecutor()
+
+    # Executor for handling downloads
+    executor = ThreadPoolExecutor(max_workers=5)
 
     async def download_song(url):
         """Download a song or playlist using yt_dlp."""
         loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(executor, lambda: ytdl.extract_info(url, download=True))
+        data = await loop.run_in_executor(executor, lambda: ytdl.extract_info(url, download=True))
+        file_path = ytdl.prepare_filename(data)
+        print(f"Downloaded file path: {file_path}")  # Debugging
+        return data
 
     async def play_next_song(guild_id, voice_client):
         """Play the next song in the queue."""
         if guild_id in song_queues and song_queues[guild_id]:
             next_song = song_queues[guild_id].pop(0)
 
+            # Ensure the file exists
             if not os.path.exists(next_song["file"]):
                 print(f"Error: File not found - {next_song['file']}")
                 return
 
+            # Play the song
             player = discord.FFmpegPCMAudio(next_song["file"], **ffmpeg_options)
             voice_client.play(player, after=lambda e: asyncio.run_coroutine_threadsafe(
                 play_next_song(guild_id, voice_client), client.loop
             ))
 
+            # Delete the file after playback
             try:
                 os.remove(next_song["file"])
                 print(f"Deleted temporary file: {next_song['file']}")
             except Exception as e:
                 print(f"Error deleting file: {e}")
 
+            # Send now playing message
             text_channel = await get_text_channel(guild_id)
             if text_channel:
                 await text_channel.send(f"Now casting: {next_song['title']}")
 
     async def get_text_channel(guild_id):
+        """Find a text channel in the guild where the bot can send messages."""
         guild = client.get_guild(guild_id)
         if guild:
             for channel in guild.text_channels:
@@ -71,28 +91,31 @@ def run_bot():
     @client.event
     async def on_message(message):
         if message.author.bot:
-            return
+            return  # Ignore messages from bots
 
         if message.content.startswith("?play"):
             if not message.author.voice or not message.author.voice.channel:
-                await message.channel.send("You must be in a voice channel to cast Fire 4!")
+                await message.channel.send("You must be in a voice channel to use `?play`!")
                 return
 
             try:
                 url = message.content.split()[1]
 
+                # Join the user's voice channel if not already connected
                 if message.guild.id not in voice_clients:
                     voice_client = await message.author.voice.channel.connect()
                     voice_clients[message.guild.id] = voice_client
                 else:
                     voice_client = voice_clients[message.guild.id]
 
+                # Queue songs
                 if message.guild.id not in song_queues:
                     song_queues[message.guild.id] = []
 
                 data = await download_song(url)
 
                 if "entries" in data:
+                    # Handle playlist
                     await message.channel.send(f"Found a playlist with {len(data['entries'])} songs. Queuing them...")
                     for entry in data["entries"]:
                         song = {
@@ -101,6 +124,7 @@ def run_bot():
                         }
                         song_queues[message.guild.id].append(song)
                 else:
+                    # Handle single video
                     song = {
                         "file": ytdl.prepare_filename(data),
                         "title": data.get("title", "Unknown Title")
@@ -114,8 +138,9 @@ def run_bot():
 
             except Exception as e:
                 print(f"Error in ?play: {e}")
-                await message.channel.send("There was an error trying to process the request.")
+                await message.channel.send("There was an error processing your request.")
 
+        # Pause command
         if message.content.startswith("?pause"):
             try:
                 if message.guild.id in voice_clients and voice_clients[message.guild.id].is_playing():
@@ -126,6 +151,7 @@ def run_bot():
             except Exception as e:
                 print(f"Error in ?pause: {e}")
 
+        # Resume command
         if message.content.startswith("?resume"):
             try:
                 if message.guild.id in voice_clients and voice_clients[message.guild.id].is_paused():
@@ -136,6 +162,7 @@ def run_bot():
             except Exception as e:
                 print(f"Error in ?resume: {e}")
 
+        # Stop command
         if message.content.startswith("?stop"):
             try:
                 if message.guild.id in voice_clients:
