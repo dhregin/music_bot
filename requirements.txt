@@ -1,0 +1,5 @@
+# Python 3.13 is missing the audioloop library necessary to work with discord
+discord.py
+yt-dlp
+python-dotenv
+pynacl
