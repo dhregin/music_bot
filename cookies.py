@@ -1,63 +1,70 @@
+import os
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
-import pickle
-import time
+from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from dotenv import load_dotenv
 
-# Path to save cookies
-COOKIES_PATH = "/home/ec2-user/music_bot/cookies.txt"
+def login_youtube():
+    # Load environment variables
+    load_dotenv(dotenv_path="/home/ec2-user/music_bot/.env")
+    youtube_email = os.getenv("youtube_email")
+    youtube_password = os.getenv("youtube_password")
 
-# Configure Chrome options
-chrome_options = Options()
-chrome_options.add_argument("--headless")  # Run Chrome in headless mode
-chrome_options.add_argument("--disable-gpu")
-chrome_options.add_argument("--no-sandbox")
-chrome_options.add_argument("--disable-dev-shm-usage")
+    if not youtube_email or not youtube_password:
+        print("YouTube email or password not found in .env file.")
+        return
 
-# Initialize WebDriver
-driver = webdriver.Chrome(service=Service("/usr/bin/chromedriver"), options=chrome_options)
+    # Setup WebDriver
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    service = Service('/usr/bin/chromedriver')  # Update with your ChromeDriver path
+    driver = webdriver.Chrome(service=service, options=chrome_options)
 
-def login_to_youtube(email, password):
     try:
-        # Open YouTube login page
-        driver.get("https://accounts.google.com/signin/v2/identifier?service=youtube")
+        # Navigate to YouTube login
+        driver.get("https://accounts.google.com/signin/v2/identifier")
 
         # Enter email
-        email_field = driver.find_element(By.ID, "identifierId")
-        email_field.send_keys(email)
-        email_field.send_keys(Keys.RETURN)
-        time.sleep(3)
+        email_input = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.NAME, "identifier"))
+        )
+        email_input.send_keys(youtube_email + Keys.RETURN)
 
         # Enter password
-        password_field = driver.find_element(By.NAME, "password")
-        password_field.send_keys(password)
-        password_field.send_keys(Keys.RETURN)
-        time.sleep(5)
+        password_input = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.NAME, "password"))
+        )
+        password_input.send_keys(youtube_password + Keys.RETURN)
 
-        # Wait for login to complete and redirect
-        time.sleep(10)
+        # Wait for the login process to complete
+        WebDriverWait(driver, 15).until(
+            EC.presence_of_element_located((By.XPATH, "//ytd-topbar-logo-renderer"))
+        )
 
         # Export cookies
         cookies = driver.get_cookies()
-        with open(COOKIES_PATH, "w") as f:
-            f.write("# Netscape HTTP Cookie File\n")
-            for cookie in cookies:
-                # Format cookies for Netscape
-                f.write(f"{cookie['domain']}\t{'TRUE' if cookie['domain'].startswith('.') else 'FALSE'}\t")
-                f.write(f"{cookie['path']}\t{'TRUE' if cookie.get('secure', False) else 'FALSE'}\t")
-                f.write(f"{cookie['expiry'] if 'expiry' in cookie else '0'}\t{cookie['name']}\t{cookie['value']}\n")
+        netscape_cookies = []
+        for cookie in cookies:
+            netscape_cookies.append(
+                f"{cookie['domain']}\tTRUE\t{cookie['path']}\t{cookie['secure']}\t{cookie['expiry']}\t{cookie['name']}\t{cookie['value']}"
+            )
 
-        print(f"Cookies saved to {COOKIES_PATH}")
+        with open("/home/ec2-user/music_bot/cookies.txt", "w") as f:
+            f.write("\n".join(netscape_cookies))
+
+        print("Cookies saved successfully!")
 
     except Exception as e:
-        print(f"Error during login: {e}")
+        print(f"Error during YouTube login: {e}")
     finally:
         driver.quit()
 
-# Replace with your YouTube login credentials
-YOUTUBE_EMAIL = "your-email@example.com"
-YOUTUBE_PASSWORD = "your-password"
-
-login_to_youtube(YOUTUBE_EMAIL, YOUTUBE_PASSWORD)
+# Run the login function
+login_youtube()
