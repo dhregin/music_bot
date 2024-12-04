@@ -55,9 +55,9 @@ def run_bot():
             file_path = file_path.rsplit(".", 1)[0] + ".mp3"
             
         print(f"Downloaded file path: {file_path}")
-        return
-            "file": file_path,
-            "title": data.get("title", "Unknown Title"),
+        return {
+        "file": file_path,
+        "title": data.get("title", "Unknown Title"),
     }
 
     async def play_next_song(guild_id, voice_client):
