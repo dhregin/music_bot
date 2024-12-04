@@ -1,5 +1,7 @@
 # Python 3.13 is missing the audioloop library necessary to work with discord
-discord.py
-yt-dlp
-python-dotenv
-pynacl
+discord.py==2.4.0
+yt-dlp==2024.12.3
+python-dotenv==1.0.1
+aiohttp==3.11.9
+ffmpeg-python==0.2.0
+pynacl==1.5.0
