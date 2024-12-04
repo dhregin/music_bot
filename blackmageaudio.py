@@ -54,8 +54,8 @@ def run_bot():
         return data
 
     async def play_next_song(guild_id, voice_client):
-    """Play the next song in the queue."""
-    if guild_id in song_queues and song_queues[guild_id]:
+        """Play the next song in the queue."""
+        if guild_id in song_queues and song_queues[guild_id]:
         next_song = song_queues[guild_id].pop(0)
 
         # Debugging: Check the file path
