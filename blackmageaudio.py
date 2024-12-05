@@ -2,10 +2,26 @@ import discord
 import os
 import asyncio
 import yt_dlp
+import subprocess
 from dotenv import load_dotenv
 from concurrent.futures import ThreadPoolExecutor
 import tempfile
 
+
+def update_cookies_if_needed():
+    """Update cookies only if they are not fresh."""
+    if not is_cookie_fresh():
+        print("Cookies are stale. Updating cookies...")
+        try:
+            subprocess.run(["python3", "/home/ec2-user/music_bot/cookies.py"], check=True)
+            print("Cookies updated successfully.")
+        except subprocess.CalledProcessError as e:
+            print(f"Error updating cookies: {e}")
+            raise e
+    else:
+        print("Cookies are fresh. Skipping update.")
+
+        
 def run_bot():
     # Load environment variables
     load_dotenv(dotenv_path="/home/ec2-user/music_bot/.env")
@@ -109,6 +125,8 @@ def run_bot():
 
             try:
                 url = message.content.split()[1]
+                loop = asyncio.get_event_loop()
+                await loop.run_in_executor(None, update_cookies_if_needed)
 
                 if message.guild.id not in voice_clients:
                     voice_client = await message.author.voice.channel.connect()
