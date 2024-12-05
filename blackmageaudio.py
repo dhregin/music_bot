@@ -3,23 +3,29 @@ import os
 import asyncio
 import yt_dlp
 import subprocess
+from cookies import login_youtube
 from dotenv import load_dotenv
 from concurrent.futures import ThreadPoolExecutor
 import tempfile
 
 
 def update_cookies_if_needed():
-    """Update cookies only if they are not fresh."""
-    if not is_cookie_fresh():
-        print("Cookies are stale. Updating cookies...")
-        try:
-            subprocess.run(["python3", "/home/ec2-user/music_bot/cookies.py"], check=True)
-            print("Cookies updated successfully.")
-        except subprocess.CalledProcessError as e:
-            print(f"Error updating cookies: {e}")
-            raise e
-    else:
-        print("Cookies are fresh. Skipping update.")
+    try:
+        cookies_last_updated = "/home/ec2-user/music_bot/cookies_last_updated.txt"
+        if not os.path.exists(cookies_last_updated):
+            print("Cookies timestamp not found. Updating cookies.")
+            login_youtube()
+        else:
+            with open(cookies_last_updated, "r") as f:
+                last_updated = datetime.fromisoformat(f.read().strip())
+            # Refresh cookies if older than 12 hours
+            if (datetime.utcnow() - last_updated).total_seconds() > 43200:
+                print("Cookies are older than 12 hours. Updating cookies.")
+                login_youtube()
+            else:
+                print("Cookies are up-to-date.")
+    except Exception as e:
+        print(f"Error in update_cookies_if_needed: {e}")
 
         
 def run_bot():
